@@ -16,10 +16,12 @@ const mockProject: Project = {
 
 function App() {
   return (
-    <div>
-      <h1>BotGlue</h1>
-      <p>Project: {mockProject.name}</p>
-      <p>Status: scaffolding complete</p>
+    <div className="min-h-screen bg-[#0a0a0f] text-[#f0f0f5] flex items-center justify-center">
+      <div className="text-center">
+        <h1 className="text-4xl font-semibold mb-4">BotGlue</h1>
+        <p className="text-[#a0a0b0]">Project: {mockProject.name}</p>
+        <p className="text-[#6b6b7b] mt-2">Scaffolding complete</p>
+      </div>
     </div>
   );
 }
