@@ -7,6 +7,7 @@ use db::Db;
 use serde::Serialize;
 use std::net::SocketAddr;
 use std::sync::Arc;
+use tower_http::cors::{CorsLayer, Any};
 use tower_http::services::ServeDir;
 
 pub type AppState = Arc<Db>;
@@ -40,7 +41,8 @@ async fn main() {
         .route("/api/environments/{id}/resume", post(routes::environments::resume))
         .route("/api/agents", get(routes::agents::list).post(routes::agents::create))
         .route("/api/agents/{id}", get(routes::agents::get))
-        .with_state(db);
+        .with_state(db)
+        .layer(CorsLayer::new().allow_origin(Any).allow_methods(Any).allow_headers(Any));
 
     let static_files = ServeDir::new("../web/dist").fallback(
         tower_http::services::ServeFile::new("../web/dist/index.html"),
