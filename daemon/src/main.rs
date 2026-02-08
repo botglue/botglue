@@ -1,4 +1,5 @@
 mod db;
+mod models;
 
 use axum::{routing::get, Json, Router};
 use db::Db;
