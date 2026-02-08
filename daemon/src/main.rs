@@ -38,6 +38,8 @@ async fn main() {
         .route("/api/environments/{id}", get(routes::environments::get).delete(routes::environments::delete))
         .route("/api/environments/{id}/pause", post(routes::environments::pause))
         .route("/api/environments/{id}/resume", post(routes::environments::resume))
+        .route("/api/agents", get(routes::agents::list).post(routes::agents::create))
+        .route("/api/agents/{id}", get(routes::agents::get))
         .with_state(db);
 
     let static_files = ServeDir::new("../web/dist").fallback(
