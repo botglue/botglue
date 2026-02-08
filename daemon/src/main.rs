@@ -1,5 +1,6 @@
 mod db;
 mod models;
+mod routes;
 
 use axum::{routing::get, Json, Router};
 use db::Db;
@@ -31,6 +32,8 @@ async fn main() {
 
     let api_routes = Router::new()
         .route("/api/health", get(health))
+        .route("/api/projects", get(routes::projects::list).post(routes::projects::create))
+        .route("/api/projects/{id}", get(routes::projects::get).delete(routes::projects::delete))
         .with_state(db);
 
     let static_files = ServeDir::new("../web/dist").fallback(
