@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import type { Project } from "@botglue/common/types";
 import { AgentStatusBadge } from "@botglue/common/components";
 
@@ -18,6 +19,15 @@ const mockProject: Project = {
 const statuses = ["running", "blocked", "finished", "error"] as const;
 
 function App() {
+  const [daemonStatus, setDaemonStatus] = useState<string>("checking...");
+
+  useEffect(() => {
+    fetch("/api/health")
+      .then((r) => r.json())
+      .then((data) => setDaemonStatus(`${data.status} (v${data.version})`))
+      .catch(() => setDaemonStatus("not running"));
+  }, []);
+
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-[#f0f0f5] flex items-center justify-center">
       <div className="text-center">
@@ -28,7 +38,7 @@ function App() {
             <AgentStatusBadge key={s} status={s} />
           ))}
         </div>
-        <p className="text-[#6b6b7b] mt-4">Scaffolding complete</p>
+        <p className="text-[#6b6b7b] mt-4">Daemon: {daemonStatus}</p>
       </div>
     </div>
   );

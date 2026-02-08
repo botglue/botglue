@@ -10,4 +10,12 @@ export default defineConfig({
       "@botglue/common": path.resolve(__dirname, "../ui-common"),
     },
   },
+  server: {
+    proxy: {
+      "/api": {
+        target: "http://localhost:3001",
+        changeOrigin: true,
+      },
+    },
+  },
 });
