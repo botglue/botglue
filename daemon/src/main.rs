@@ -1,7 +1,13 @@
+mod db;
+
 use axum::{routing::get, Json, Router};
+use db::Db;
 use serde::Serialize;
 use std::net::SocketAddr;
+use std::sync::Arc;
 use tower_http::services::ServeDir;
+
+pub type AppState = Arc<Db>;
 
 #[derive(Serialize)]
 struct HealthResponse {
@@ -20,9 +26,12 @@ async fn health() -> Json<HealthResponse> {
 async fn main() {
     tracing_subscriber::fmt::init();
 
-    let api_routes = Router::new().route("/api/health", get(health));
+    let db = Arc::new(Db::open("botglue.db").expect("Failed to open database"));
 
-    // Serve web/dist/ as static files, fallback to index.html for SPA routing
+    let api_routes = Router::new()
+        .route("/api/health", get(health))
+        .with_state(db);
+
     let static_files = ServeDir::new("../web/dist").fallback(
         tower_http::services::ServeFile::new("../web/dist/index.html"),
     );
