@@ -2,7 +2,7 @@ mod db;
 mod models;
 mod routes;
 
-use axum::{routing::get, Json, Router};
+use axum::{routing::{get, post}, Json, Router};
 use db::Db;
 use serde::Serialize;
 use std::net::SocketAddr;
@@ -34,6 +34,10 @@ async fn main() {
         .route("/api/health", get(health))
         .route("/api/projects", get(routes::projects::list).post(routes::projects::create))
         .route("/api/projects/{id}", get(routes::projects::get).delete(routes::projects::delete))
+        .route("/api/environments", get(routes::environments::list).post(routes::environments::create))
+        .route("/api/environments/{id}", get(routes::environments::get).delete(routes::environments::delete))
+        .route("/api/environments/{id}/pause", post(routes::environments::pause))
+        .route("/api/environments/{id}/resume", post(routes::environments::resume))
         .with_state(db);
 
     let static_files = ServeDir::new("../web/dist").fallback(
