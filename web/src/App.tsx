@@ -1,4 +1,5 @@
 import type { Project } from "@botglue/common/types";
+import { AgentStatusBadge } from "@botglue/common/components";
 
 const mockProject: Project = {
   id: "1",
@@ -14,13 +15,20 @@ const mockProject: Project = {
   created_at: new Date().toISOString(),
 };
 
+const statuses = ["running", "blocked", "finished", "error"] as const;
+
 function App() {
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-[#f0f0f5] flex items-center justify-center">
       <div className="text-center">
         <h1 className="text-4xl font-semibold mb-4">BotGlue</h1>
         <p className="text-[#a0a0b0]">Project: {mockProject.name}</p>
-        <p className="text-[#6b6b7b] mt-2">Scaffolding complete</p>
+        <div className="flex gap-2 mt-4 justify-center">
+          {statuses.map((s) => (
+            <AgentStatusBadge key={s} status={s} />
+          ))}
+        </div>
+        <p className="text-[#6b6b7b] mt-4">Scaffolding complete</p>
       </div>
     </div>
   );
