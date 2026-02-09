@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router";
 import type { Project, Environment, Agent } from "@botglue/common/types";
 import { api } from "@botglue/common/api";
 import { EnvironmentCard, AgentStatusBadge } from "@botglue/common/components";
+import { CreateEnvironmentForm } from "../components/CreateEnvironmentForm";
 
 export function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -116,6 +117,7 @@ export function ProjectDetailPage() {
           <h2 className="text-sm font-medium text-[#a0a0b0] uppercase tracking-wide">
             Environments
           </h2>
+          <CreateEnvironmentForm projectId={project.id} onCreated={loadData} />
         </div>
         {environments.length === 0 ? (
           <p className="text-[#6b6b7b] text-sm">No environments yet.</p>

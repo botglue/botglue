@@ -45,8 +45,8 @@ export const api = {
     create: (data: {
       project_id: string;
       branch: string;
-      container_id: string;
-      ports: string;
+      container_id?: string;
+      ports?: { name: string; container_port: number; host_port?: number; protocol?: string }[];
     }) =>
       request<Environment>("/api/environments", {
         method: "POST",
