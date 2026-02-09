@@ -54,7 +54,17 @@ Open http://localhost:5173 — you'll see the Dashboard page. It fetches project
 
 ### Try it out
 
-With both servers running, create some test data:
+With both servers running:
+
+1. Click **"+ New Project"** on the Dashboard to create a project (name, repo URL, branch)
+2. Click a project card to open the **Project Detail** page
+3. Click **"+ New Environment"** to add an environment (branch name)
+4. Click an environment card to open the **Environment Detail** page — here you can:
+   - **Pause/Resume/Delete** the environment with the action buttons
+   - Click **"+ New Agent"** to add an agent (select type, describe the task)
+5. Agents with `blocked`, `error`, or `finished` status appear in the **"Needs Attention"** queue on the Dashboard
+
+You can also create test data via curl:
 
 ```bash
 # Create a project
@@ -65,15 +75,13 @@ curl -X POST http://localhost:3001/api/projects \
 # Note the project id from the response, then create an environment
 curl -X POST http://localhost:3001/api/environments \
   -H 'Content-Type: application/json' \
-  -d '{"project_id":"<PROJECT_ID>","branch":"feature-x","container_id":"abc123","ports":"[]"}'
+  -d '{"project_id":"<PROJECT_ID>","branch":"feature-x"}'
 
 # Note the environment id, then create an agent
 curl -X POST http://localhost:3001/api/agents \
   -H 'Content-Type: application/json' \
-  -d '{"env_id":"<ENV_ID>","agent_type":"claude","current_task":"Implement login page"}'
+  -d '{"env_id":"<ENV_ID>","type":"claude","current_task":"Implement login page"}'
 ```
-
-Refresh the dashboard to see your project with its environment and agent. Agents with `blocked`, `error`, or `finished` status appear in the "Needs Attention" queue at the top.
 
 ## Production Build
 
