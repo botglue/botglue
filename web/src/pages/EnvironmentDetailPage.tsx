@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router";
 import type { Project, Environment, Agent } from "@botglue/common/types";
 import { api } from "@botglue/common/api";
@@ -17,6 +17,12 @@ export function EnvironmentDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [command, setCommand] = useState("");
+  const [execOutput, setExecOutput] = useState<
+    { command: string; output: string; exit_code: number }[]
+  >([]);
+  const [execLoading, setExecLoading] = useState(false);
+  const execEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (projectId && envId) loadData();
@@ -75,6 +81,32 @@ export function EnvironmentDetailPage() {
       setActionLoading(false);
     }
   }
+
+  async function handleExec(e: React.FormEvent) {
+    e.preventDefault();
+    if (!command.trim()) return;
+    setExecLoading(true);
+    try {
+      const result = await api.environments.exec(envId!, command);
+      setExecOutput((prev) => [...prev, { command, ...result }]);
+      setCommand("");
+    } catch (err) {
+      setExecOutput((prev) => [
+        ...prev,
+        {
+          command,
+          output: err instanceof Error ? err.message : "Exec failed",
+          exit_code: -1,
+        },
+      ]);
+    } finally {
+      setExecLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    execEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [execOutput]);
 
   if (loading) {
     return (
@@ -206,6 +238,52 @@ export function EnvironmentDetailPage() {
                 <span className="text-[#6b6b7b] ml-2">:{port.host_port}</span>
               </a>
             ))}
+          </div>
+        </section>
+      )}
+
+      {/* Terminal */}
+      {environment.status === "running" && (
+        <section className="mb-8">
+          <h2 className="text-sm font-medium text-[#a0a0b0] uppercase tracking-wide mb-3">
+            Terminal
+          </h2>
+          <div className="rounded-lg border border-[#1a1a2f] overflow-hidden">
+            {execOutput.length > 0 && (
+              <div className="max-h-80 overflow-y-auto bg-[#0a0a0f] p-3 font-mono text-sm">
+                {execOutput.map((entry, i) => (
+                  <div key={i} className="mb-2 last:mb-0">
+                    <div className="text-[#6b6b7b]">$ {entry.command}</div>
+                    <pre className="whitespace-pre-wrap text-[#e0e0e5]">
+                      {entry.output}
+                    </pre>
+                    {entry.exit_code !== 0 && (
+                      <div className="text-red-400 text-xs">
+                        exit code: {entry.exit_code}
+                      </div>
+                    )}
+                  </div>
+                ))}
+                <div ref={execEndRef} />
+              </div>
+            )}
+            <form onSubmit={handleExec} className="flex gap-2 p-2 bg-[#0a0a0f] border-t border-[#2a2a4f]">
+              <input
+                type="text"
+                value={command}
+                onChange={(e) => setCommand(e.target.value)}
+                placeholder="Enter command..."
+                disabled={execLoading}
+                className="flex-1 bg-[#0a0a0f] border border-[#2a2a4f] focus:border-[#4a4a6f] rounded px-3 py-2 text-sm font-mono outline-none disabled:opacity-50"
+              />
+              <button
+                type="submit"
+                disabled={execLoading || !command.trim()}
+                className="bg-[#2a2a4f] hover:bg-[#3a3a5f] disabled:opacity-50 rounded px-3 py-2 text-sm"
+              >
+                Run
+              </button>
+            </form>
           </div>
         </section>
       )}

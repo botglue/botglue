@@ -7,6 +7,7 @@ Command center for AI agent-assisted development. Manage multiple AI coding agen
 - [Rust](https://rustup.rs/) (1.75+)
 - [Node.js](https://nodejs.org/) (22+)
 - [pnpm](https://pnpm.io/) (10+)
+- [Podman](https://podman.io/) (4.0+) — used to run environment containers
 
 ## Project Structure
 
@@ -17,7 +18,8 @@ botglue/
 │       ├── main.rs      # HTTP server, route mounting
 │       ├── db.rs         # SQLite connection + schema migration
 │       ├── models/       # Data structs + DB queries
-│       └── routes/       # Axum HTTP handlers
+│       ├── routes/       # Axum HTTP handlers
+│       └── podman.rs     # Podman container lifecycle
 ├── ui-common/       # Shared TypeScript library (types, components)
 ├── web/             # React SPA (Vite + Tailwind)
 └── docs/            # Design docs and plans
@@ -61,6 +63,7 @@ With both servers running:
 3. Click **"+ New Environment"** to add an environment (branch name)
 4. Click an environment card to open the **Environment Detail** page — here you can:
    - **Pause/Resume/Delete** the environment with the action buttons
+   - Use the **Terminal** panel to run shell commands inside the container (e.g. `echo hello`, `ls /`)
    - Click **"+ New Agent"** to add an agent (select type, describe the task)
 5. Agents with `blocked`, `error`, or `finished` status appear in the **"Needs Attention"** queue on the Dashboard
 
@@ -81,6 +84,11 @@ curl -X POST http://localhost:3001/api/environments \
 curl -X POST http://localhost:3001/api/agents \
   -H 'Content-Type: application/json' \
   -d '{"env_id":"<ENV_ID>","type":"claude","current_task":"Implement login page"}'
+
+# Run a command inside the environment's container
+curl -X POST http://localhost:3001/api/environments/<ENV_ID>/exec \
+  -H 'Content-Type: application/json' \
+  -d '{"command":"echo hello"}'
 ```
 
 ## Production Build
@@ -98,8 +106,11 @@ Open http://localhost:3001
 ## Tests
 
 ```bash
-# Run daemon unit tests (11 tests across models)
+# Run daemon unit tests (11 tests across models + podman port allocation)
 cd daemon && cargo test
+
+# Run Podman integration tests (requires podman running)
+cd daemon && cargo test -- --ignored
 ```
 
 ## Typecheck
@@ -126,6 +137,7 @@ GET    /api/environments/{id}
 DELETE /api/environments/{id}
 POST   /api/environments/{id}/pause
 POST   /api/environments/{id}/resume
+POST   /api/environments/{id}/exec
 GET    /api/agents?env_id=
 POST   /api/agents
 GET    /api/agents/{id}
@@ -133,6 +145,6 @@ GET    /api/agents/{id}
 
 ## Architecture
 
-- **daemon** — Rust/Axum server with SQLite storage. Serves the REST API (`/api/*`) and the production SPA build. CRUD for projects, environments, and agents. Will manage Podman containers, monitor agents, and proxy LLM calls.
+- **daemon** — Rust/Axum server with SQLite storage. Serves the REST API (`/api/*`) and the production SPA build. CRUD for projects, environments, and agents. Manages Podman containers for environments (create, pause/resume via stop/start, delete, exec). Auto-allocates host ports from a configurable range (default 10000–11000).
 - **ui-common** — Shared React components and TypeScript types. Imported by `web` via `@botglue/common` path alias. Designed to be reusable in a future Tauri desktop app.
 - **web** — React + Vite SPA. In development, Vite proxies `/api` requests to the daemon. In production, the daemon serves the built files directly.
