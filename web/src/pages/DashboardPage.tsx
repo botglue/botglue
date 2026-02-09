@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router";
 import type { Project, Environment, Agent } from "@botglue/common/types";
 import { api } from "@botglue/common/api";
 import {
@@ -6,6 +7,7 @@ import {
   EnvironmentCard,
   AgentStatusBadge,
 } from "@botglue/common/components";
+import { CreateProjectForm } from "../components/CreateProjectForm";
 
 interface ProjectData {
   project: Project;
@@ -17,6 +19,7 @@ export function DashboardPage() {
   const [projects, setProjects] = useState<ProjectData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     loadData();
@@ -88,7 +91,10 @@ export function DashboardPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold mb-6">Dashboard</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-semibold">Dashboard</h1>
+        <CreateProjectForm onCreated={loadData} />
+      </div>
 
       {/* Attention Queue */}
       {attentionAgents.length > 0 && (
@@ -133,6 +139,7 @@ export function DashboardPage() {
                   project={project}
                   environmentCount={environments.length}
                   agentCount={agents.length}
+                  onClick={() => navigate(`/projects/${project.id}`)}
                 />
                 {environments.length > 0 && (
                   <div className="mt-2 ml-2 space-y-1">
