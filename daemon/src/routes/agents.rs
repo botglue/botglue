@@ -14,10 +14,10 @@ pub struct ListQuery {
 }
 
 pub async fn list(
-    State(db): State<AppState>,
+    State(state): State<AppState>,
     Query(query): Query<ListQuery>,
 ) -> Result<Json<Vec<Agent>>, StatusCode> {
-    agent::list_agents(&db, query.env_id.as_deref())
+    agent::list_agents(&state.db, query.env_id.as_deref())
         .map(Json)
         .map_err(|e| {
             tracing::error!("Failed to list agents: {}", e);
@@ -26,10 +26,10 @@ pub async fn list(
 }
 
 pub async fn get(
-    State(db): State<AppState>,
+    State(state): State<AppState>,
     Path(id): Path<String>,
 ) -> Result<Json<Agent>, StatusCode> {
-    match agent::get_agent(&db, &id) {
+    match agent::get_agent(&state.db, &id) {
         Ok(Some(a)) => Ok(Json(a)),
         Ok(None) => Err(StatusCode::NOT_FOUND),
         Err(e) => {
@@ -40,10 +40,10 @@ pub async fn get(
 }
 
 pub async fn create(
-    State(db): State<AppState>,
+    State(state): State<AppState>,
     Json(input): Json<CreateAgent>,
 ) -> Result<(StatusCode, Json<Agent>), StatusCode> {
-    agent::create_agent(&db, input)
+    agent::create_agent(&state.db, input)
         .map(|a| (StatusCode::CREATED, Json(a)))
         .map_err(|e| {
             tracing::error!("Failed to create agent: {}", e);

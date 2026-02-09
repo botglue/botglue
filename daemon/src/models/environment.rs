@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use rusqlite::{params, Row};
 use serde::{Deserialize, Serialize};
 
@@ -119,6 +121,47 @@ pub fn update_environment_status(
 pub fn delete_environment(db: &Db, id: &str) -> Result<bool, rusqlite::Error> {
     let conn = db.conn();
     let rows = conn.execute("DELETE FROM environments WHERE id = ?1", params![id])?;
+    Ok(rows > 0)
+}
+
+pub fn get_used_ports(db: &Db) -> Result<HashSet<u16>, rusqlite::Error> {
+    let conn = db.conn();
+    let mut stmt = conn.prepare(
+        "SELECT ports FROM environments WHERE status != 'destroyed'",
+    )?;
+    let rows = stmt.query_map([], |row| {
+        let ports_json: String = row.get(0)?;
+        Ok(ports_json)
+    })?;
+
+    let mut used = HashSet::new();
+    for row in rows {
+        let ports_json = row?;
+        if let Ok(ports) = serde_json::from_str::<Vec<PortMapping>>(&ports_json) {
+            for mapping in ports {
+                if let Some(hp) = mapping.host_port {
+                    used.insert(hp);
+                }
+            }
+        }
+    }
+    Ok(used)
+}
+
+pub fn update_environment_container(
+    db: &Db,
+    id: &str,
+    container_id: &str,
+    ports: &[PortMapping],
+    status: &str,
+) -> Result<bool, rusqlite::Error> {
+    let conn = db.conn();
+    let now = chrono::Utc::now().to_rfc3339();
+    let ports_json = serde_json::to_string(ports).unwrap_or_else(|_| "[]".to_string());
+    let rows = conn.execute(
+        "UPDATE environments SET container_id = ?1, ports = ?2, status = ?3, last_active = ?4 WHERE id = ?5",
+        params![container_id, ports_json, status, now, id],
+    )?;
     Ok(rows > 0)
 }
 
@@ -274,6 +317,88 @@ mod tests {
         // Non-existent environment
         let not_found = update_environment_status(&db, "nonexistent", "running").unwrap();
         assert!(!not_found);
+    }
+
+    #[test]
+    fn test_update_environment_container() {
+        let db = test_db();
+        let project = create_test_project(&db);
+
+        let env = create_environment(
+            &db,
+            CreateEnvironment {
+                project_id: project.id.clone(),
+                branch: "main".to_string(),
+                container_id: None,
+                ports: None,
+            },
+        )
+        .unwrap();
+
+        assert_eq!(env.status, "creating");
+        assert_eq!(env.container_id, "");
+        assert!(env.ports.is_empty());
+
+        let ports = vec![PortMapping {
+            name: "http".to_string(),
+            container_port: 8080,
+            host_port: Some(10000),
+            protocol: Some("tcp".to_string()),
+        }];
+
+        let updated =
+            update_environment_container(&db, &env.id, "abc123container", &ports, "running")
+                .unwrap();
+        assert!(updated);
+
+        let fetched = get_environment(&db, &env.id).unwrap().unwrap();
+        assert_eq!(fetched.status, "running");
+        assert_eq!(fetched.container_id, "abc123container");
+        assert_eq!(fetched.ports.len(), 1);
+        assert_eq!(fetched.ports[0].host_port, Some(10000));
+    }
+
+    #[test]
+    fn test_get_used_ports() {
+        let db = test_db();
+        let project = create_test_project(&db);
+
+        create_environment(
+            &db,
+            CreateEnvironment {
+                project_id: project.id.clone(),
+                branch: "main".to_string(),
+                container_id: None,
+                ports: Some(vec![PortMapping {
+                    name: "http".to_string(),
+                    container_port: 8080,
+                    host_port: Some(10000),
+                    protocol: None,
+                }]),
+            },
+        )
+        .unwrap();
+
+        create_environment(
+            &db,
+            CreateEnvironment {
+                project_id: project.id.clone(),
+                branch: "dev".to_string(),
+                container_id: None,
+                ports: Some(vec![PortMapping {
+                    name: "api".to_string(),
+                    container_port: 3000,
+                    host_port: Some(10001),
+                    protocol: None,
+                }]),
+            },
+        )
+        .unwrap();
+
+        let used = get_used_ports(&db).unwrap();
+        assert!(used.contains(&10000));
+        assert!(used.contains(&10001));
+        assert!(!used.contains(&10002));
     }
 
     #[test]

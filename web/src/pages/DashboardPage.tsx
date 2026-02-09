@@ -148,6 +148,7 @@ export function DashboardPage() {
                         key={env.id}
                         environment={env}
                         agentCount={agents.filter((a) => a.env_id === env.id).length}
+                        onClick={() => navigate(`/projects/${project.id}/environments/${env.id}`)}
                       />
                     ))}
                   </div>

@@ -58,6 +58,11 @@ export const api = {
       request<void>(`/api/environments/${id}/resume`, { method: "POST" }),
     delete: (id: string) =>
       request<void>(`/api/environments/${id}`, { method: "DELETE" }),
+    exec: (id: string, command: string) =>
+      request<{ output: string; exit_code: number }>(`/api/environments/${id}/exec`, {
+        method: "POST",
+        body: JSON.stringify({ command }),
+      }),
   },
 
   agents: {
