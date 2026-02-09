@@ -50,7 +50,30 @@ cd web
 pnpm dev
 ```
 
-Open http://localhost:5173
+Open http://localhost:5173 — you'll see the Dashboard page. It fetches projects, environments, and agents from the daemon API.
+
+### Try it out
+
+With both servers running, create some test data:
+
+```bash
+# Create a project
+curl -X POST http://localhost:3001/api/projects \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"my-app","repo_url":"https://github.com/me/my-app","default_branch":"main"}'
+
+# Note the project id from the response, then create an environment
+curl -X POST http://localhost:3001/api/environments \
+  -H 'Content-Type: application/json' \
+  -d '{"project_id":"<PROJECT_ID>","branch":"feature-x","container_id":"abc123","ports":"[]"}'
+
+# Note the environment id, then create an agent
+curl -X POST http://localhost:3001/api/agents \
+  -H 'Content-Type: application/json' \
+  -d '{"env_id":"<ENV_ID>","agent_type":"claude","current_task":"Implement login page"}'
+```
+
+Refresh the dashboard to see your project with its environment and agent. Agents with `blocked`, `error`, or `finished` status appear in the "Needs Attention" queue at the top.
 
 ## Production Build
 
