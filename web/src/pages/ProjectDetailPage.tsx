@@ -130,6 +130,7 @@ export function ProjectDetailPage() {
                   <EnvironmentCard
                     environment={env}
                     agentCount={envAgents.length}
+                    onClick={() => navigate(`/projects/${id}/environments/${env.id}`)}
                   />
                   {envAgents.length > 0 && (
                     <div className="ml-4 mt-1 space-y-1">
