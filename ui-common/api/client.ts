@@ -73,7 +73,11 @@ export const api = {
     }) =>
       request<Agent>("/api/agents", {
         method: "POST",
-        body: JSON.stringify(data),
+        body: JSON.stringify({
+          env_id: data.env_id,
+          type: data.agent_type,
+          current_task: data.current_task,
+        }),
       }),
   },
 };
