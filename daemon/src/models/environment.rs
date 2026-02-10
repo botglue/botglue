@@ -182,6 +182,7 @@ mod tests {
                 repo_url: "https://github.com/example/test".to_string(),
                 default_branch: None,
                 notification_prefs: None,
+                project_type: None,
             },
         )
         .unwrap()
@@ -245,6 +246,7 @@ mod tests {
                 repo_url: "https://github.com/example/p2".to_string(),
                 default_branch: None,
                 notification_prefs: None,
+                project_type: None,
             },
         )
         .unwrap();

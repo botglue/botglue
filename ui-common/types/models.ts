@@ -4,6 +4,7 @@ export interface Project {
   repo_url: string;
   default_branch: string;
   notification_prefs: NotificationPrefs;
+  project_type: "standard" | "incubator";
   created_at: string;
 }
 
@@ -39,8 +40,19 @@ export interface Agent {
   status: "running" | "blocked" | "finished" | "error";
   current_task: string;
   blocker: string | null;
+  idea_id: string | null;
   started_at: string;
   last_activity: string;
+}
+
+export interface Idea {
+  id: string;
+  project_id: string;
+  title: string;
+  description: string;
+  status: "draft" | "active" | "completed" | "archived";
+  created_at: string;
+  updated_at: string;
 }
 
 export interface AuditEntry {

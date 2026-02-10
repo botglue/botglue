@@ -10,6 +10,7 @@ export function CreateProjectForm({ onCreated }: CreateProjectFormProps) {
   const [name, setName] = useState("");
   const [repoUrl, setRepoUrl] = useState("");
   const [defaultBranch, setDefaultBranch] = useState("main");
+  const [projectType, setProjectType] = useState("standard");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -22,10 +23,12 @@ export function CreateProjectForm({ onCreated }: CreateProjectFormProps) {
         name,
         repo_url: repoUrl,
         default_branch: defaultBranch,
+        project_type: projectType,
       });
       setName("");
       setRepoUrl("");
       setDefaultBranch("main");
+      setProjectType("standard");
       setOpen(false);
       onCreated();
     } catch (err) {
@@ -84,6 +87,14 @@ export function CreateProjectForm({ onCreated }: CreateProjectFormProps) {
         onChange={(e) => setDefaultBranch(e.target.value)}
         className="w-full bg-[#0a0a0f] border border-[#2a2a4f] rounded px-3 py-1.5 text-sm focus:outline-none focus:border-[#4a4a6f]"
       />
+      <select
+        value={projectType}
+        onChange={(e) => setProjectType(e.target.value)}
+        className="w-full bg-[#0a0a0f] border border-[#2a2a4f] rounded px-3 py-1.5 text-sm focus:outline-none focus:border-[#4a4a6f]"
+      >
+        <option value="standard">Standard</option>
+        <option value="incubator">Incubator</option>
+      </select>
       {error && <p className="text-red-400 text-xs">{error}</p>}
       <button
         type="submit"

@@ -64,8 +64,23 @@ impl Db {
                 started_at TEXT NOT NULL,
                 last_activity TEXT NOT NULL
             );
+
+            CREATE TABLE IF NOT EXISTS ideas (
+                id TEXT PRIMARY KEY,
+                project_id TEXT NOT NULL REFERENCES projects(id),
+                title TEXT NOT NULL,
+                description TEXT NOT NULL DEFAULT '',
+                status TEXT NOT NULL DEFAULT 'draft',
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
             ",
         )?;
+
+        // Idempotent ALTER TABLE migrations
+        let _ = conn.execute("ALTER TABLE projects ADD COLUMN project_type TEXT NOT NULL DEFAULT 'standard'", []);
+        let _ = conn.execute("ALTER TABLE agents ADD COLUMN idea_id TEXT REFERENCES ideas(id)", []);
+
         Ok(())
     }
 }

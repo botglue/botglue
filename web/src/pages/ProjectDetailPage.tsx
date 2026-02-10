@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router";
-import type { Project, Environment, Agent } from "@botglue/common/types";
+import type { Project, Environment, Agent, Idea } from "@botglue/common/types";
 import { api } from "@botglue/common/api";
-import { EnvironmentCard, AgentStatusBadge } from "@botglue/common/components";
+import { EnvironmentCard, AgentStatusBadge, IdeaStatusBadge } from "@botglue/common/components";
 import { CreateEnvironmentForm } from "../components/CreateEnvironmentForm";
+import { CreateIdeaForm } from "../components/CreateIdeaForm";
 
 export function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -11,6 +12,8 @@ export function ProjectDetailPage() {
   const [project, setProject] = useState<Project | null>(null);
   const [environments, setEnvironments] = useState<Environment[]>([]);
   const [agents, setAgents] = useState<Map<string, Agent[]>>(new Map());
+  const [ideas, setIdeas] = useState<Idea[]>([]);
+  const [ideaAgentCounts, setIdeaAgentCounts] = useState<Map<string, number>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -25,8 +28,12 @@ export function ProjectDetailPage() {
       const proj = await api.projects.get(id!);
       setProject(proj);
 
-      const envs = await api.environments.list(id!);
+      const [envs, ideaList] = await Promise.all([
+        api.environments.list(id!),
+        api.ideas.list(id!),
+      ]);
       setEnvironments(envs);
+      setIdeas(ideaList);
 
       const agentMap = new Map<string, Agent[]>();
       await Promise.all(
@@ -36,6 +43,14 @@ export function ProjectDetailPage() {
         })
       );
       setAgents(agentMap);
+
+      // Count agents per idea
+      const counts = new Map<string, number>();
+      for (const idea of ideaList) {
+        const ideaAgents = await api.agents.list(undefined, idea.id);
+        counts.set(idea.id, ideaAgents.length);
+      }
+      setIdeaAgentCounts(counts);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load project");
     } finally {
@@ -87,7 +102,14 @@ export function ProjectDetailPage() {
           >
             &larr; Dashboard
           </button>
-          <h1 className="text-2xl font-semibold">{project.name}</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-semibold">{project.name}</h1>
+            {project.project_type === "incubator" && (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border bg-purple-500/20 text-purple-400 border-purple-500/30">
+                incubator
+              </span>
+            )}
+          </div>
         </div>
         <button
           onClick={handleDelete}
@@ -109,6 +131,44 @@ export function ProjectDetailPage() {
             <span className="font-mono">{project.default_branch}</span>
           </div>
         </div>
+      </section>
+
+      {/* Ideas */}
+      <section className="mb-8">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-medium text-[#a0a0b0] uppercase tracking-wide">
+            Ideas
+          </h2>
+          <CreateIdeaForm projectId={project.id} onCreated={loadData} />
+        </div>
+        {ideas.length === 0 ? (
+          <p className="text-[#6b6b7b] text-sm">No ideas yet.</p>
+        ) : (
+          <div className="space-y-2">
+            {ideas.map((idea) => (
+              <div
+                key={idea.id}
+                onClick={() => navigate(`/projects/${id}/ideas/${idea.id}`)}
+                className="rounded-lg border border-[#1a1a2f] bg-[#12121f] p-3 cursor-pointer hover:border-[#2a2a4f] transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <IdeaStatusBadge status={idea.status} />
+                  <span className="text-sm font-medium flex-1">{idea.title}</span>
+                  {(ideaAgentCounts.get(idea.id) || 0) > 0 && (
+                    <span className="text-xs text-[#6b6b7b]">
+                      {ideaAgentCounts.get(idea.id)} agent{(ideaAgentCounts.get(idea.id) || 0) > 1 ? "s" : ""}
+                    </span>
+                  )}
+                </div>
+                {idea.description && (
+                  <p className="text-xs text-[#6b6b7b] mt-1 truncate ml-[74px]">
+                    {idea.description}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* Environments */}

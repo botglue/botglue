@@ -303,7 +303,8 @@ export function EnvironmentDetailPage() {
             {agents.map((agent) => (
               <div
                 key={agent.id}
-                className="rounded-lg border border-[#1a1a2f] bg-[#12121f] p-3 flex items-center gap-3"
+                onClick={() => navigate(`/projects/${projectId}/agents/${agent.id}`)}
+                className="rounded-lg border border-[#1a1a2f] bg-[#12121f] p-3 flex items-center gap-3 cursor-pointer hover:border-[#2a2a4f] transition-colors"
               >
                 <AgentStatusBadge status={agent.status} />
                 <div className="flex-1 min-w-0">

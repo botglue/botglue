@@ -27,6 +27,7 @@ pub struct Project {
     pub repo_url: String,
     pub default_branch: String,
     pub notification_prefs: NotificationPrefs,
+    pub project_type: String,
     pub created_at: String,
 }
 
@@ -36,6 +37,7 @@ pub struct CreateProject {
     pub repo_url: String,
     pub default_branch: Option<String>,
     pub notification_prefs: Option<NotificationPrefs>,
+    pub project_type: Option<String>,
 }
 
 impl Project {
@@ -43,12 +45,14 @@ impl Project {
         let prefs_json: String = row.get("notification_prefs")?;
         let notification_prefs: NotificationPrefs =
             serde_json::from_str(&prefs_json).unwrap_or_default();
+        let project_type: String = row.get("project_type").unwrap_or_else(|_| "standard".to_string());
         Ok(Project {
             id: row.get("id")?,
             name: row.get("name")?,
             repo_url: row.get("repo_url")?,
             default_branch: row.get("default_branch")?,
             notification_prefs,
+            project_type,
             created_at: row.get("created_at")?,
         })
     }
@@ -59,7 +63,7 @@ use crate::db::Db;
 pub fn list_projects(db: &Db) -> Result<Vec<Project>, rusqlite::Error> {
     let conn = db.conn();
     let mut stmt = conn.prepare(
-        "SELECT id, name, repo_url, default_branch, notification_prefs, created_at FROM projects ORDER BY created_at DESC",
+        "SELECT id, name, repo_url, default_branch, notification_prefs, project_type, created_at FROM projects ORDER BY created_at DESC",
     )?;
     let projects = stmt
         .query_map([], |row| Project::from_row(row))?
@@ -70,7 +74,7 @@ pub fn list_projects(db: &Db) -> Result<Vec<Project>, rusqlite::Error> {
 pub fn get_project(db: &Db, id: &str) -> Result<Option<Project>, rusqlite::Error> {
     let conn = db.conn();
     let mut stmt = conn.prepare(
-        "SELECT id, name, repo_url, default_branch, notification_prefs, created_at FROM projects WHERE id = ?1",
+        "SELECT id, name, repo_url, default_branch, notification_prefs, project_type, created_at FROM projects WHERE id = ?1",
     )?;
     let mut rows = stmt.query_map(params![id], |row| Project::from_row(row))?;
     match rows.next() {
@@ -85,11 +89,12 @@ pub fn create_project(db: &Db, input: CreateProject) -> Result<Project, rusqlite
     let default_branch = input.default_branch.unwrap_or_else(|| "main".to_string());
     let prefs = input.notification_prefs.unwrap_or_default();
     let prefs_json = serde_json::to_string(&prefs).unwrap();
+    let project_type = input.project_type.unwrap_or_else(|| "standard".to_string());
 
     let conn = db.conn();
     conn.execute(
-        "INSERT INTO projects (id, name, repo_url, default_branch, notification_prefs, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-        params![id, input.name, input.repo_url, default_branch, prefs_json, now],
+        "INSERT INTO projects (id, name, repo_url, default_branch, notification_prefs, project_type, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+        params![id, input.name, input.repo_url, default_branch, prefs_json, project_type, now],
     )?;
 
     Ok(Project {
@@ -98,6 +103,7 @@ pub fn create_project(db: &Db, input: CreateProject) -> Result<Project, rusqlite
         repo_url: input.repo_url,
         default_branch,
         notification_prefs: prefs,
+        project_type,
         created_at: now,
     })
 }
@@ -126,6 +132,7 @@ mod tests {
                 repo_url: "https://github.com/example/test".to_string(),
                 default_branch: None,
                 notification_prefs: None,
+                project_type: None,
             },
         )
         .unwrap();
@@ -149,6 +156,7 @@ mod tests {
                 repo_url: "https://github.com/a".to_string(),
                 default_branch: None,
                 notification_prefs: None,
+                project_type: None,
             },
         )
         .unwrap();
@@ -159,6 +167,7 @@ mod tests {
                 repo_url: "https://github.com/b".to_string(),
                 default_branch: None,
                 notification_prefs: None,
+                project_type: None,
             },
         )
         .unwrap();
@@ -177,6 +186,7 @@ mod tests {
                 repo_url: "https://github.com/del".to_string(),
                 default_branch: None,
                 notification_prefs: None,
+                project_type: None,
             },
         )
         .unwrap();

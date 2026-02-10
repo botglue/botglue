@@ -12,6 +12,8 @@ pub struct Agent {
     pub status: String,
     pub current_task: String,
     pub blocker: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub idea_id: Option<String>,
     pub started_at: String,
     pub last_activity: String,
 }
@@ -22,6 +24,7 @@ pub struct CreateAgent {
     #[serde(rename = "type")]
     pub agent_type: String,
     pub current_task: String,
+    pub idea_id: Option<String>,
 }
 
 impl Agent {
@@ -33,6 +36,7 @@ impl Agent {
             status: row.get("status")?,
             current_task: row.get("current_task")?,
             blocker: row.get("blocker")?,
+            idea_id: row.get("idea_id").ok(),
             started_at: row.get("started_at")?,
             last_activity: row.get("last_activity")?,
         })
@@ -44,7 +48,7 @@ pub fn list_agents(db: &Db, env_id: Option<&str>) -> Result<Vec<Agent>, rusqlite
     match env_id {
         Some(eid) => {
             let mut stmt = conn.prepare(
-                "SELECT id, env_id, type, status, current_task, blocker, started_at, last_activity \
+                "SELECT id, env_id, type, status, current_task, blocker, idea_id, started_at, last_activity \
                  FROM agents WHERE env_id = ?1 ORDER BY started_at DESC",
             )?;
             let agents = stmt
@@ -54,7 +58,7 @@ pub fn list_agents(db: &Db, env_id: Option<&str>) -> Result<Vec<Agent>, rusqlite
         }
         None => {
             let mut stmt = conn.prepare(
-                "SELECT id, env_id, type, status, current_task, blocker, started_at, last_activity \
+                "SELECT id, env_id, type, status, current_task, blocker, idea_id, started_at, last_activity \
                  FROM agents ORDER BY started_at DESC",
             )?;
             let agents = stmt
@@ -68,7 +72,7 @@ pub fn list_agents(db: &Db, env_id: Option<&str>) -> Result<Vec<Agent>, rusqlite
 pub fn get_agent(db: &Db, id: &str) -> Result<Option<Agent>, rusqlite::Error> {
     let conn = db.conn();
     let mut stmt = conn.prepare(
-        "SELECT id, env_id, type, status, current_task, blocker, started_at, last_activity \
+        "SELECT id, env_id, type, status, current_task, blocker, idea_id, started_at, last_activity \
          FROM agents WHERE id = ?1",
     )?;
     let mut rows = stmt.query_map(params![id], |row| Agent::from_row(row))?;
@@ -84,9 +88,9 @@ pub fn create_agent(db: &Db, input: CreateAgent) -> Result<Agent, rusqlite::Erro
 
     let conn = db.conn();
     conn.execute(
-        "INSERT INTO agents (id, env_id, type, status, current_task, blocker, started_at, last_activity) \
-         VALUES (?1, ?2, ?3, 'running', ?4, NULL, ?5, ?6)",
-        params![id, input.env_id, input.agent_type, input.current_task, now, now],
+        "INSERT INTO agents (id, env_id, type, status, current_task, blocker, idea_id, started_at, last_activity) \
+         VALUES (?1, ?2, ?3, 'running', ?4, NULL, ?5, ?6, ?7)",
+        params![id, input.env_id, input.agent_type, input.current_task, input.idea_id, now, now],
     )?;
 
     Ok(Agent {
@@ -96,9 +100,28 @@ pub fn create_agent(db: &Db, input: CreateAgent) -> Result<Agent, rusqlite::Erro
         status: "running".to_string(),
         current_task: input.current_task,
         blocker: None,
+        idea_id: input.idea_id,
         started_at: now.clone(),
         last_activity: now,
     })
+}
+
+pub fn list_agents_by_idea(db: &Db, idea_id: &str) -> Result<Vec<Agent>, rusqlite::Error> {
+    let conn = db.conn();
+    let mut stmt = conn.prepare(
+        "SELECT id, env_id, type, status, current_task, blocker, idea_id, started_at, last_activity \
+         FROM agents WHERE idea_id = ?1 ORDER BY started_at DESC",
+    )?;
+    let agents = stmt
+        .query_map(params![idea_id], |row| Agent::from_row(row))?
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(agents)
+}
+
+pub fn delete_agent(db: &Db, id: &str) -> Result<bool, rusqlite::Error> {
+    let conn = db.conn();
+    let rows = conn.execute("DELETE FROM agents WHERE id = ?1", params![id])?;
+    Ok(rows > 0)
 }
 
 pub fn update_agent_status(
@@ -134,6 +157,7 @@ mod tests {
                 repo_url: "https://github.com/example/test".to_string(),
                 default_branch: None,
                 notification_prefs: None,
+                project_type: None,
             },
         )
         .unwrap()
@@ -164,6 +188,7 @@ mod tests {
                 env_id: env.id.clone(),
                 agent_type: "coder".to_string(),
                 current_task: "implement feature X".to_string(),
+                idea_id: None,
             },
         )
         .unwrap();
@@ -203,6 +228,7 @@ mod tests {
                 env_id: env1.id.clone(),
                 agent_type: "coder".to_string(),
                 current_task: "task A".to_string(),
+                idea_id: None,
             },
         )
         .unwrap();
@@ -212,6 +238,7 @@ mod tests {
                 env_id: env1.id.clone(),
                 agent_type: "reviewer".to_string(),
                 current_task: "task B".to_string(),
+                idea_id: None,
             },
         )
         .unwrap();
@@ -223,6 +250,7 @@ mod tests {
                 env_id: env2.id.clone(),
                 agent_type: "coder".to_string(),
                 current_task: "task C".to_string(),
+                idea_id: None,
             },
         )
         .unwrap();
@@ -252,6 +280,7 @@ mod tests {
                 env_id: env.id.clone(),
                 agent_type: "coder".to_string(),
                 current_task: "implement feature".to_string(),
+                idea_id: None,
             },
         )
         .unwrap();

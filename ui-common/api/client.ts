@@ -2,6 +2,7 @@ import type {
   Project,
   Environment,
   Agent,
+  Idea,
 } from "../types";
 
 class ApiError extends Error {
@@ -29,7 +30,12 @@ export const api = {
   projects: {
     list: () => request<Project[]>("/api/projects"),
     get: (id: string) => request<Project>(`/api/projects/${id}`),
-    create: (data: { name: string; repo_url: string; default_branch: string }) =>
+    create: (data: {
+      name: string;
+      repo_url: string;
+      default_branch: string;
+      project_type?: string;
+    }) =>
       request<Project>("/api/projects", {
         method: "POST",
         body: JSON.stringify(data),
@@ -65,16 +71,48 @@ export const api = {
       }),
   },
 
+  ideas: {
+    list: (projectId: string) =>
+      request<Idea[]>(`/api/ideas?project_id=${projectId}`),
+    get: (id: string) => request<Idea>(`/api/ideas/${id}`),
+    create: (data: { project_id: string; title: string; description?: string }) =>
+      request<Idea>("/api/ideas", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    update: (id: string, data: { title: string; description: string }) =>
+      request<void>(`/api/ideas/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(data),
+      }),
+    updateStatus: (id: string, status: string) =>
+      request<void>(`/api/ideas/${id}/status`, {
+        method: "PUT",
+        body: JSON.stringify({ status }),
+      }),
+    graduate: (id: string, data: { name: string; repo_url: string }) =>
+      request<Project>(`/api/ideas/${id}/graduate`, {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    delete: (id: string) =>
+      request<void>(`/api/ideas/${id}`, { method: "DELETE" }),
+  },
+
   agents: {
-    list: (envId?: string) =>
-      request<Agent[]>(
-        envId ? `/api/agents?env_id=${envId}` : "/api/agents"
-      ),
+    list: (envId?: string, ideaId?: string) => {
+      const params = new URLSearchParams();
+      if (envId) params.set("env_id", envId);
+      if (ideaId) params.set("idea_id", ideaId);
+      const qs = params.toString();
+      return request<Agent[]>(qs ? `/api/agents?${qs}` : "/api/agents");
+    },
     get: (id: string) => request<Agent>(`/api/agents/${id}`),
     create: (data: {
       env_id: string;
       agent_type: string;
       current_task: string;
+      idea_id?: string;
     }) =>
       request<Agent>("/api/agents", {
         method: "POST",
@@ -82,8 +120,16 @@ export const api = {
           env_id: data.env_id,
           type: data.agent_type,
           current_task: data.current_task,
+          idea_id: data.idea_id,
         }),
       }),
+    updateStatus: (id: string, status: string, blocker?: string) =>
+      request<void>(`/api/agents/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ status, blocker }),
+      }),
+    delete: (id: string) =>
+      request<void>(`/api/agents/${id}`, { method: "DELETE" }),
   },
 };
 

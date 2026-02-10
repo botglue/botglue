@@ -3,7 +3,7 @@ mod models;
 pub mod podman;
 mod routes;
 
-use axum::{routing::{get, post}, Json, Router};
+use axum::{routing::{get, post, put}, Json, Router};
 use db::Db;
 use podman::PodmanConfig;
 use serde::Serialize;
@@ -51,8 +51,12 @@ async fn main() {
         .route("/api/environments/{id}/pause", post(routes::environments::pause))
         .route("/api/environments/{id}/resume", post(routes::environments::resume))
         .route("/api/environments/{id}/exec", post(routes::environments::exec))
+        .route("/api/ideas", get(routes::ideas::list).post(routes::ideas::create))
+        .route("/api/ideas/{id}", get(routes::ideas::get).put(routes::ideas::update).delete(routes::ideas::delete))
+        .route("/api/ideas/{id}/status", put(routes::ideas::update_status))
+        .route("/api/ideas/{id}/graduate", post(routes::ideas::graduate))
         .route("/api/agents", get(routes::agents::list).post(routes::agents::create))
-        .route("/api/agents/{id}", get(routes::agents::get))
+        .route("/api/agents/{id}", get(routes::agents::get).patch(routes::agents::update).delete(routes::agents::delete))
         .with_state(state)
         .layer(CorsLayer::new().allow_origin(Any).allow_methods(Any).allow_headers(Any));
 
